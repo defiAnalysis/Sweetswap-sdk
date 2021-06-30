@@ -63,9 +63,9 @@ export const WETH = {
   [ChainId.GÖRLI]: new Token(ChainId.GÖRLI, '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', 18, 'WETH', 'Wrapped Ether'),
   [ChainId.KOVAN]: new Token(ChainId.KOVAN, '0xd0A1E359811322d97991E03f863a0C30C2cF029C', 18, 'WETH', 'Wrapped Ether'),
   [ChainId.HECOMAIN]: new Token(ChainId.HECOMAIN, '0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F', 18, 'WHT', 'Wrapped HT'),
-  [ChainId.HECOTEST]: new Token(ChainId.HECOTEST, '0x50b29a42c9e4d0f940292c386207f492458ee358', 18, 'WHT', 'Wrapped HT'),
+  [ChainId.HECOTEST]: new Token(ChainId.HECOTEST, '0x50B29a42c9e4d0f940292c386207f492458eE358', 18, 'WHT', 'Wrapped HT'),
   [ChainId.BIANMAIN]: new Token(ChainId.BIANMAIN, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, 'WBNB', 'Wrapped BNB'),
-  [ChainId.BIANTEST]: new Token(ChainId.BIANTEST, '0xae13d989dac2f0debff460ac112a837c89baa7cd', 18, 'WBNB', 'Wrapped BNB'),
+  [ChainId.BIANTEST]: new Token(ChainId.BIANTEST, '0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd', 18, 'WBNB', 'Wrapped BNB'),
   [ChainId.OKTEST]: new Token(ChainId.OKTEST, '0xB13991B6253172118b962045906b27ce73C21ecD', 18, 'WOKT', 'Wrapped OKT'),
   [ChainId.OKTMAIN]: new Token(ChainId.OKTMAIN, '0x8F8526dbfd6E38E3D8307702cA8469Bae6C56C15', 18, 'WOKT', 'Wrapped OKT')
 }

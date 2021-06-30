@@ -142,7 +142,7 @@ export class Pair {
     if (JSBI.equal(outputAmount.raw, ZERO)) {
       throw new InsufficientInputAmountError()
     }
-    return [outputAmount, new Pair("",inputReserve.add(inputAmount), outputReserve.subtract(outputAmount))]
+    return [outputAmount, new Pair(this.pairAddr,inputReserve.add(inputAmount), outputReserve.subtract(outputAmount))]
   }
 
   public getInputAmount(outputAmount: TokenAmount, fee = 997): [TokenAmount, Pair] {
