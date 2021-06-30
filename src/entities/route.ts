@@ -7,6 +7,7 @@ import { Pair } from './pair'
 import { Price } from './fractions/price'
 
 export class Route {
+  public readonly pairsAddress: string[]
   public readonly pairs: Pair[]
   public readonly path: Token[]
   public readonly input: Currency
@@ -38,6 +39,8 @@ export class Route {
       const output = currentInput.equals(pair.token0) ? pair.token1 : pair.token0
       path.push(output)
     }
+
+    pairs.every(pair => this.pairsAddress.push(pair.pairAddr))
 
     this.pairs = pairs
     this.path = path
