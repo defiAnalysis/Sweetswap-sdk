@@ -11,7 +11,6 @@ var address = require('@ethersproject/address');
 var _Big = _interopDefault(require('big.js'));
 var toFormat = _interopDefault(require('toformat'));
 var _Decimal = _interopDefault(require('decimal.js-light'));
-var solidity = require('@ethersproject/solidity');
 var contracts = require('@ethersproject/contracts');
 var networks = require('@ethersproject/networks');
 var providers = require('@ethersproject/providers');
@@ -80,24 +79,6 @@ function _createClass(Constructor, protoProps, staticProps) {
   if (protoProps) _defineProperties(Constructor.prototype, protoProps);
   if (staticProps) _defineProperties(Constructor, staticProps);
   return Constructor;
-}
-
-function _extends() {
-  _extends = Object.assign || function (target) {
-    for (var i = 1; i < arguments.length; i++) {
-      var source = arguments[i];
-
-      for (var key in source) {
-        if (Object.prototype.hasOwnProperty.call(source, key)) {
-          target[key] = source[key];
-        }
-      }
-    }
-
-    return target;
-  };
-
-  return _extends.apply(this, arguments);
 }
 
 function _inheritsLoose(subClass, superClass) {
@@ -456,7 +437,7 @@ function currencyEquals(currencyA, currencyB) {
     return currencyA === currencyB;
   }
 }
-var WETH = (_WETH = {}, _WETH[exports.ChainId.MAINNET] = /*#__PURE__*/new Token(exports.ChainId.MAINNET, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.ROPSTEN] = /*#__PURE__*/new Token(exports.ChainId.ROPSTEN, '0xc778417E063141139Fce010982780140Aa0cD5Ab', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.RINKEBY] = /*#__PURE__*/new Token(exports.ChainId.RINKEBY, '0xc778417E063141139Fce010982780140Aa0cD5Ab', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.GÖRLI] = /*#__PURE__*/new Token(exports.ChainId.GÖRLI, '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.KOVAN] = /*#__PURE__*/new Token(exports.ChainId.KOVAN, '0xd0A1E359811322d97991E03f863a0C30C2cF029C', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.HECOMAIN] = /*#__PURE__*/new Token(exports.ChainId.HECOMAIN, '0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F', 18, 'WHT', 'Wrapped HT'), _WETH[exports.ChainId.HECOTEST] = /*#__PURE__*/new Token(exports.ChainId.HECOTEST, '0x50B29a42c9e4d0f940292c386207f492458eE358', 18, 'WHT', 'Wrapped HT'), _WETH[exports.ChainId.BIANMAIN] = /*#__PURE__*/new Token(exports.ChainId.BIANMAIN, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, 'WBNB', 'Wrapped BNB'), _WETH[exports.ChainId.BIANTEST] = /*#__PURE__*/new Token(exports.ChainId.BIANTEST, '0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd', 18, 'WBNB', 'Wrapped BNB'), _WETH[exports.ChainId.OKTEST] = /*#__PURE__*/new Token(exports.ChainId.OKTEST, '0xB13991B6253172118b962045906b27ce73C21ecD', 18, 'WOKT', 'Wrapped OKT'), _WETH[exports.ChainId.OKTMAIN] = /*#__PURE__*/new Token(exports.ChainId.OKTMAIN, '0x8F8526dbfd6E38E3D8307702cA8469Bae6C56C15', 18, 'WOKT', 'Wrapped OKT'), _WETH);
+var WETH = (_WETH = {}, _WETH[exports.ChainId.MAINNET] = /*#__PURE__*/new Token(exports.ChainId.MAINNET, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.ROPSTEN] = /*#__PURE__*/new Token(exports.ChainId.ROPSTEN, '0xc778417E063141139Fce010982780140Aa0cD5Ab', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.RINKEBY] = /*#__PURE__*/new Token(exports.ChainId.RINKEBY, '0xc778417E063141139Fce010982780140Aa0cD5Ab', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.GÖRLI] = /*#__PURE__*/new Token(exports.ChainId.GÖRLI, '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.KOVAN] = /*#__PURE__*/new Token(exports.ChainId.KOVAN, '0xd0A1E359811322d97991E03f863a0C30C2cF029C', 18, 'WETH', 'Wrapped Ether'), _WETH[exports.ChainId.HECOMAIN] = /*#__PURE__*/new Token(exports.ChainId.HECOMAIN, '0x5545153CCFcA01fbd7Dd11C0b23ba694D9509A6F', 18, 'WHT', 'Wrapped HT'), _WETH[exports.ChainId.HECOTEST] = /*#__PURE__*/new Token(exports.ChainId.HECOTEST, '0x50b29a42c9e4d0f940292c386207f492458ee358', 18, 'WHT', 'Wrapped HT'), _WETH[exports.ChainId.BIANMAIN] = /*#__PURE__*/new Token(exports.ChainId.BIANMAIN, '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, 'WBNB', 'Wrapped BNB'), _WETH[exports.ChainId.BIANTEST] = /*#__PURE__*/new Token(exports.ChainId.BIANTEST, '0xae13d989dac2f0debff460ac112a837c89baa7cd', 18, 'WBNB', 'Wrapped BNB'), _WETH[exports.ChainId.OKTEST] = /*#__PURE__*/new Token(exports.ChainId.OKTEST, '0xB13991B6253172118b962045906b27ce73C21ecD', 18, 'WOKT', 'Wrapped OKT'), _WETH[exports.ChainId.OKTMAIN] = /*#__PURE__*/new Token(exports.ChainId.OKTMAIN, '0x8F8526dbfd6E38E3D8307702cA8469Bae6C56C15', 18, 'WOKT', 'Wrapped OKT'), _WETH);
 
 var _toSignificantRoundin, _toFixedRounding;
 var Decimal = /*#__PURE__*/toFormat(_Decimal);
@@ -774,36 +755,43 @@ var Price = /*#__PURE__*/function (_Fraction) {
   return Price;
 }(Fraction);
 
-var PAIR_ADDRESS_CACHE = {};
 var Pair = /*#__PURE__*/function () {
+  //   const tokens = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
+  //   if (PAIR_ADDRESS_CACHE?.[tokens[0].address]?.[tokens[1].address] === undefined) {
+  //     PAIR_ADDRESS_CACHE = {
+  //       ...PAIR_ADDRESS_CACHE,
+  //       [tokens[0].address]: {
+  //         ...PAIR_ADDRESS_CACHE?.[tokens[0].address],
+  //         [tokens[1].address]: getCreate2Address(
+  //           FACTORY_ADDRESS[tokenA.chainId],
+  //           keccak256(['bytes'], [pack(['address', 'address'], [tokens[0].address, tokens[1].address])]),
+  //           INIT_CODE_HASHES[tokenA.chainId]
+  //         )
+  //       }
+  //     }
+  //   }
+  //  return PAIR_ADDRESS_CACHE[tokens[0].address][tokens[1].address]
+  // }
   function Pair(pairAddr, tokenAmountA, tokenAmountB) {
     var tokenAmounts = tokenAmountA.token.sortsBefore(tokenAmountB.token) // does safety checks
     ? [tokenAmountA, tokenAmountB] : [tokenAmountB, tokenAmountA];
-    this.liquidityToken = new Token(tokenAmounts[0].token.chainId, Pair.getAddress(tokenAmounts[0].token, tokenAmounts[1].token), 18, 'GLP:' + tokenAmounts[0].token.symbol + '-' + tokenAmounts[1].token.symbol, 'GoSwap LP Token');
+    this.liquidityToken = new Token(tokenAmounts[0].token.chainId, pairAddr, 18, 'GLP:' + tokenAmounts[0].token.symbol + '-' + tokenAmounts[1].token.symbol, 'GoSwap LP Token');
     this.tokenAmounts = tokenAmounts;
     this.pairAddr = pairAddr;
   }
 
-  Pair.getAddress = function getAddress(tokenA, tokenB) {
-    var _PAIR_ADDRESS_CACHE, _PAIR_ADDRESS_CACHE$t;
+  var _proto = Pair.prototype;
 
-    var tokens = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA]; // does safety checks
-
-    if (((_PAIR_ADDRESS_CACHE = PAIR_ADDRESS_CACHE) === null || _PAIR_ADDRESS_CACHE === void 0 ? void 0 : (_PAIR_ADDRESS_CACHE$t = _PAIR_ADDRESS_CACHE[tokens[0].address]) === null || _PAIR_ADDRESS_CACHE$t === void 0 ? void 0 : _PAIR_ADDRESS_CACHE$t[tokens[1].address]) === undefined) {
-      var _PAIR_ADDRESS_CACHE2, _extends2, _extends3;
-
-      PAIR_ADDRESS_CACHE = _extends({}, PAIR_ADDRESS_CACHE, (_extends3 = {}, _extends3[tokens[0].address] = _extends({}, (_PAIR_ADDRESS_CACHE2 = PAIR_ADDRESS_CACHE) === null || _PAIR_ADDRESS_CACHE2 === void 0 ? void 0 : _PAIR_ADDRESS_CACHE2[tokens[0].address], (_extends2 = {}, _extends2[tokens[1].address] = address.getCreate2Address(FACTORY_ADDRESS[tokenA.chainId], solidity.keccak256(['bytes'], [solidity.pack(['address', 'address'], [tokens[0].address, tokens[1].address])]), INIT_CODE_HASHES[tokenA.chainId]), _extends2)), _extends3));
-    }
-
-    return PAIR_ADDRESS_CACHE[tokens[0].address][tokens[1].address];
+  _proto.getAddress = function getAddress(tokenA, tokenB) {
+    // return this.pairAddr
+    tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA];
+    return this.pairAddr;
   }
   /**
    * Returns true if the token is either token0 or token1
    * @param token to check
    */
   ;
-
-  var _proto = Pair.prototype;
 
   _proto.involvesToken = function involvesToken(token) {
     return token.equals(this.token0) || token.equals(this.token1);

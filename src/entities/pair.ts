@@ -2,9 +2,6 @@ import { Price } from './fractions/price'
 import { TokenAmount } from './fractions/tokenAmount'
 import invariant from 'tiny-invariant'
 import JSBI from 'jsbi'
-import { pack, keccak256 } from '@ethersproject/solidity'
-import { getCreate2Address } from '@ethersproject/address'
-import { FACTORY_ADDRESS,INIT_CODE_HASHES } from '../constants'
 
 import {
   BigintIsh,
@@ -19,33 +16,30 @@ import { sqrt, parseBigintIsh } from '../utils'
 import { InsufficientReservesError, InsufficientInputAmountError } from '../errors'
 import { Token } from './token'
 
-let PAIR_ADDRESS_CACHE: { [token0Address: string]: { [token1Address: string]: string } } = {}
-
 export class Pair {
   public readonly pairAddr: string
   public readonly liquidityToken: Token
   private readonly tokenAmounts: [TokenAmount, TokenAmount]
 
-  public static getAddress(tokenA: Token, tokenB: Token): string {
-    const tokens = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
 
-    if (PAIR_ADDRESS_CACHE?.[tokens[0].address]?.[tokens[1].address] === undefined) {
-      PAIR_ADDRESS_CACHE = {
-        ...PAIR_ADDRESS_CACHE,
-        [tokens[0].address]: {
-          ...PAIR_ADDRESS_CACHE?.[tokens[0].address],
-          [tokens[1].address]: getCreate2Address(
-            FACTORY_ADDRESS[tokenA.chainId],
-            keccak256(['bytes'], [pack(['address', 'address'], [tokens[0].address, tokens[1].address])]),
-            INIT_CODE_HASHES[tokenA.chainId]
-          )
-        }
-      }
-    }
+  //   const tokens = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
 
-    return PAIR_ADDRESS_CACHE[tokens[0].address][tokens[1].address]
-  }
+  //   if (PAIR_ADDRESS_CACHE?.[tokens[0].address]?.[tokens[1].address] === undefined) {
+  //     PAIR_ADDRESS_CACHE = {
+  //       ...PAIR_ADDRESS_CACHE,
+  //       [tokens[0].address]: {
+  //         ...PAIR_ADDRESS_CACHE?.[tokens[0].address],
+  //         [tokens[1].address]: getCreate2Address(
+  //           FACTORY_ADDRESS[tokenA.chainId],
+  //           keccak256(['bytes'], [pack(['address', 'address'], [tokens[0].address, tokens[1].address])]),
+  //           INIT_CODE_HASHES[tokenA.chainId]
+  //         )
+  //       }
+  //     }
+  //   }
 
+  //  return PAIR_ADDRESS_CACHE[tokens[0].address][tokens[1].address]
+  // }
 
 
   public constructor(pairAddr:string,tokenAmountA: TokenAmount, tokenAmountB: TokenAmount) {
@@ -54,13 +48,21 @@ export class Pair {
       : [tokenAmountB, tokenAmountA]
     this.liquidityToken = new Token(
       tokenAmounts[0].token.chainId,
-      Pair.getAddress(tokenAmounts[0].token, tokenAmounts[1].token),
+      pairAddr,
       18,
       'GLP:' + tokenAmounts[0].token.symbol + '-' + tokenAmounts[1].token.symbol,
       'GoSwap LP Token'
     )
     this.tokenAmounts = tokenAmounts as [TokenAmount, TokenAmount]
     this.pairAddr = pairAddr
+  }
+
+  public getAddress(tokenA: Token, tokenB: Token): string {
+    // return this.pairAddr
+
+    tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] 
+    
+    return this.pairAddr
   }
 
   /**
