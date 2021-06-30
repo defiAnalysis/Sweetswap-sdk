@@ -40,6 +40,7 @@ export class Route {
       path.push(output)
     }
 
+    this.pairsAddress = new Array(pairs.length);
     pairs.every(pair => this.pairsAddress.push(pair.pairAddr))
 
     this.pairs = pairs
