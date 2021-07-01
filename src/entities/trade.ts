@@ -37,6 +37,7 @@ export function inputOutputComparator(a: InputOutput, b: InputOutput): number {
   // must have same input and output token for comparison
   invariant(currencyEquals(a.inputAmount.currency, b.inputAmount.currency), 'INPUT_CURRENCY')
   invariant(currencyEquals(a.outputAmount.currency, b.outputAmount.currency), 'OUTPUT_CURRENCY')
+
   if (a.outputAmount.equalTo(b.outputAmount)) {
     if (a.inputAmount.equalTo(b.inputAmount)) {
       return 0
@@ -55,6 +56,16 @@ export function inputOutputComparator(a: InputOutput, b: InputOutput): number {
       return -1
     }
   }
+}
+
+export function tradeFilter(a: Trade) {
+  if(currencyEquals(a.inputAmount.currency, a.outputAmount.currency)) {
+    if (a.outputAmount.lessThan(a.inputAmount)){
+      return -1
+    }
+  }
+
+  return 0
 }
 
 // extension of the input output comparator that also considers other dimensions of the trade in ranking them
@@ -259,7 +270,7 @@ export class Trade {
     pairs: Pair[],
     currencyAmountIn: CurrencyAmount,
     currencyOut: Currency,
-    { maxNumResults = 3, maxHops = 3 }: BestTradeOptions = {},
+    { maxNumResults = 1, maxHops = 3 }: BestTradeOptions = {},
     // used in recursion.
     currentPairs: Pair[] = [],
     originalAmountIn: CurrencyAmount = currencyAmountIn,
@@ -304,7 +315,8 @@ export class Trade {
             TradeType.EXACT_INPUT
           ),
           maxNumResults,
-          tradeComparator
+          tradeComparator,
+          tradeFilter
         )
       } else if (maxHops > 1 && pairs.length > 1) {
         const pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length))
@@ -392,7 +404,8 @@ export class Trade {
             TradeType.EXACT_OUTPUT
           ),
           maxNumResults,
-          tradeComparator
+          tradeComparator,
+          tradeFilter
         )
       } else if (maxHops > 1 && pairs.length > 1) {
         const pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length))

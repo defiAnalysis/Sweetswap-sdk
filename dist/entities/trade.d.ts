@@ -10,6 +10,7 @@ interface InputOutput {
     readonly outputAmount: CurrencyAmount;
 }
 export declare function inputOutputComparator(a: InputOutput, b: InputOutput): number;
+export declare function tradeFilter(a: Trade): 0 | -1;
 export declare function tradeComparator(a: Trade, b: Trade): number;
 export interface BestTradeOptions {
     maxNumResults?: number;
