@@ -1,3 +1,4 @@
+import JSBI from 'jsbi';
 import { TradeType } from '../constants';
 import { Currency } from './currency';
 import { CurrencyAmount } from './fractions/currencyAmount';
@@ -49,6 +50,8 @@ export declare class Trade {
      * The percent difference between the mid price before the trade and the trade execution price.
      */
     readonly priceImpact: Percent;
+    readonly optimalAmount: JSBI;
+    readonly output: JSBI;
     /**
      * Constructs an exact in trade with the given amount in and route
      * @param route route of the exact in trade
@@ -61,7 +64,7 @@ export declare class Trade {
      * @param amountOut the amount returned by the trade
      */
     static exactOut(route: Route, amountOut: CurrencyAmount): Trade;
-    constructor(route: Route, amount: CurrencyAmount, tradeType: TradeType);
+    constructor(route: Route, amount: CurrencyAmount, tradeType: TradeType, optimalAmount: JSBI, output: JSBI);
     /**
      * Get the minimum amount that must be received from this trade for the given slippage tolerance
      * @param slippageTolerance tolerance of unfavorable slippage from the execution price of this trade
@@ -72,6 +75,7 @@ export declare class Trade {
      * @param slippageTolerance tolerance of unfavorable slippage from the execution price of this trade
      */
     maximumAmountIn(slippageTolerance: Percent): CurrencyAmount;
+    static findArb(pairs: Pair[], currencyAmountIn: CurrencyAmount, currencyOut: Currency, { maxNumResults, maxHops }?: BestTradeOptions, currentPairs?: Pair[], originalAmountIn?: CurrencyAmount, bestTrades?: Trade[]): Trade[];
     /**
      * Given a list of pairs, and a fixed amount in, returns the top `maxNumResults` trades that go from an input token
      * amount to an output token, making at most `maxHops` hops.

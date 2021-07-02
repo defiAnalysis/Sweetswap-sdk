@@ -1105,6 +1105,14 @@ function tradeComparator(a, b) {
 
   if (ioComp !== 0) {
     return ioComp;
+  } //newTrade['profit'] = newTrade['outputAmount']-newTrade['optimalAmount']
+
+
+  var Aprofit = JSBI.subtract(a.output, a.optimalAmount);
+  var Bprofit = JSBI.subtract(b.output, b.optimalAmount);
+
+  if (JSBI.GE(Aprofit, Bprofit)) {
+    return -1;
   } // consider lowest slippage next, since these are less likely to fail
 
 
@@ -1133,6 +1141,98 @@ function wrappedCurrency(currency, chainId) {
   if (currency instanceof Token) return currency;
   if (currency === ETHER) return WETH[chainId];
     invariant(false, 'CURRENCY')  ;
+} //getOptimalAmount
+
+
+function getOptimalAmount(Ea, Eb) {
+  // (Decimal.sqrt(Ea*Eb*d997*d1000)-Ea*d1000)/d997
+  var numerator = JSBI.multiply(JSBI.multiply(JSBI.multiply(Ea, Eb), JSBI.BigInt(1000)), JSBI.BigInt(997));
+  var numm = JSBI.multiply(Ea, JSBI.BigInt(1000));
+  var num1 = JSBI.subtract(JSBI.BigInt(Math.sqrt(JSBI.toNumber(numerator))), numm);
+  var num2 = JSBI.divide(num1, JSBI.BigInt(997));
+  return num2;
+}
+
+function getAmountOut(amountIn, reserveIn, reserveOut) {
+  var numerator = JSBI.multiply(JSBI.multiply(reserveOut, amountIn), JSBI.BigInt(997));
+  var numm = JSBI.add(JSBI.multiply(JSBI.BigInt(1000), reserveIn), JSBI.multiply(JSBI.BigInt(997), amountIn));
+  return JSBI.divide(numerator, numm);
+}
+
+function getEaEb(tokenIn, pairs) {
+  var Ea = ZERO;
+  var Eb = ZERO;
+  var Ra;
+  var Rb;
+  var Rb1;
+  var Rc;
+  var tokenOut = tokenIn;
+
+  for (var i = 0; i < pairs.length; i++) {
+    var pair = pairs[i];
+
+    if (i == 0) {
+      if (tokenIn.address == pair.token0.address) {
+        tokenOut = pair.token1;
+      } else {
+        tokenOut = pair.token0;
+      }
+    } else if (i == 1) {
+      Ra = pairs[0].reserve0.raw;
+      Rb = pairs[0].reserve1.raw;
+
+      if (tokenIn.address == pairs[0].token0.address) {
+        var temp = Ra;
+        Ra = Rb;
+        Rb = temp;
+      }
+
+      Rb1 = pair.reserve0.raw;
+      Rc = pair.reserve1.raw;
+
+      if (tokenOut.address == pair.token0.address) {
+        var _temp = Rb1;
+        Rb1 = Rc;
+        Rc = _temp;
+        tokenOut = pair.token0;
+      } else {
+        var numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000));
+        var denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997), Rb));
+        Ea = JSBI.divide(numerator, denominator);
+        var numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997));
+        var denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997), Rb));
+        Eb = JSBI.divide(numerator2, denominator2);
+      }
+    } else {
+      Ra = Ea;
+      Rb = Eb;
+      Rb1 = pair.reserve0.raw;
+      Rc = pair.reserve1.raw;
+
+      if (tokenOut.address == pair.token1.address) {
+        var _temp2 = Rb1;
+        Rb1 = Rc;
+        Rc = _temp2;
+        tokenOut = pair.token0;
+      } else {
+        tokenOut = pair.token1;
+      }
+
+      var _numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000));
+
+      var _denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997), Rb));
+
+      Ea = JSBI.divide(_numerator, _denominator);
+
+      var _numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997));
+
+      var _denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997), Rb));
+
+      Eb = JSBI.divide(_numerator2, _denominator2);
+    }
+  }
+
+  return [Ea, Eb];
 }
 /**
  * Represents a trade executed against a list of pairs.
@@ -1141,7 +1241,7 @@ function wrappedCurrency(currency, chainId) {
 
 
 var Trade = /*#__PURE__*/function () {
-  function Trade(route, amount, tradeType) {
+  function Trade(route, amount, tradeType, optimalAmount, output) {
     var amounts = new Array(route.path.length);
     var nextPairs = new Array(route.pairs.length);
     var fee = 997;
@@ -1184,6 +1284,8 @@ var Trade = /*#__PURE__*/function () {
     this.executionPrice = new Price(this.inputAmount.currency, this.outputAmount.currency, this.inputAmount.raw, this.outputAmount.raw);
     this.nextMidPrice = Price.fromRoute(new Route(nextPairs, route.input));
     this.priceImpact = computePriceImpact(route.midPrice, this.inputAmount, this.outputAmount);
+    this.optimalAmount = optimalAmount;
+    this.output = output;
   }
   /**
    * Constructs an exact in trade with the given amount in and route
@@ -1193,7 +1295,7 @@ var Trade = /*#__PURE__*/function () {
 
 
   Trade.exactIn = function exactIn(route, amountIn) {
-    return new Trade(route, amountIn, exports.TradeType.EXACT_INPUT);
+    return new Trade(route, amountIn, exports.TradeType.EXACT_INPUT, ZERO, ZERO);
   }
   /**
    * Constructs an exact out trade with the given amount out and route
@@ -1203,7 +1305,7 @@ var Trade = /*#__PURE__*/function () {
   ;
 
   Trade.exactOut = function exactOut(route, amountOut) {
-    return new Trade(route, amountOut, exports.TradeType.EXACT_OUTPUT);
+    return new Trade(route, amountOut, exports.TradeType.EXACT_OUTPUT, ZERO, ZERO);
   }
   /**
    * Get the minimum amount that must be received from this trade for the given slippage tolerance
@@ -1238,6 +1340,90 @@ var Trade = /*#__PURE__*/function () {
       var slippageAdjustedAmountIn = new Fraction(ONE).add(slippageTolerance).multiply(this.inputAmount.raw).quotient;
       return this.inputAmount instanceof TokenAmount ? new TokenAmount(this.inputAmount.token, slippageAdjustedAmountIn) : CurrencyAmount.ether(slippageAdjustedAmountIn);
     }
+  };
+
+  Trade.findArb = function findArb(pairs, currencyAmountIn, currencyOut, _temp3, // used in recursion.
+  currentPairs, originalAmountIn, bestTrades) {
+    var _ref = _temp3 === void 0 ? {} : _temp3,
+        _ref$maxNumResults = _ref.maxNumResults,
+        maxNumResults = _ref$maxNumResults === void 0 ? 1 : _ref$maxNumResults,
+        _ref$maxHops = _ref.maxHops,
+        maxHops = _ref$maxHops === void 0 ? 4 : _ref$maxHops;
+
+    if (currentPairs === void 0) {
+      currentPairs = [];
+    }
+
+    if (originalAmountIn === void 0) {
+      originalAmountIn = currencyAmountIn;
+    }
+
+    if (bestTrades === void 0) {
+      bestTrades = [];
+    }
+
+    !(pairs.length > 0) ?  invariant(false, 'PAIRS')  : void 0;
+    !(maxHops > 0) ?  invariant(false, 'MAX_HOPS')  : void 0;
+    !(originalAmountIn === currencyAmountIn || currentPairs.length > 0) ?  invariant(false, 'INVALID_RECURSION')  : void 0;
+    var chainId = currencyAmountIn instanceof TokenAmount ? currencyAmountIn.token.chainId : currencyOut instanceof Token ? currencyOut.chainId : undefined;
+    !(chainId !== undefined) ?  invariant(false, 'CHAIN_ID')  : void 0;
+    var originToken = wrappedAmount(originalAmountIn, chainId);
+    var amountIn = wrappedAmount(currencyAmountIn, chainId);
+    var tokenOut = wrappedCurrency(currencyOut, chainId);
+    !!originToken.token.equals(tokenOut) ?  invariant(false)  : void 0;
+
+    for (var i = 0; i < pairs.length; i++) {
+      var pair = pairs[i]; // pair irrelevant
+
+      if (!pair.token0.equals(amountIn.token) && !pair.token1.equals(amountIn.token)) continue;
+      if (pair.reserve0.equalTo(ZERO) || pair.reserve1.equalTo(ZERO)) continue;
+      var amountOut = void 0;
+
+      try {
+        ;
+
+        var _pair$getOutputAmount2 = pair.getOutputAmount(amountIn);
+
+        amountOut = _pair$getOutputAmount2[0];
+      } catch (error) {
+        // input too low
+        if (error.isInsufficientInputAmountError) {
+          continue;
+        }
+
+        throw error;
+      } // we have arrived at the output token, so this is the final trade of one of the paths
+
+
+      if (amountOut.token.equals(tokenOut) && currentPairs.length > 2) {
+        var _getEaEb = getEaEb(tokenOut, [].concat(currentPairs, [pair])),
+            Ea = _getEaEb[0],
+            Eb = _getEaEb[1];
+
+        if (Ea < Eb) {
+          // newTrade['optimalAmount'] = getOptimalAmount(Ea, Eb)
+          //   if newTrade['optimalAmount'] > 0:
+          //       newTrade['outputAmount'] = getAmountOut(newTrade['optimalAmount'], Ea, Eb)
+          //       newTrade['profit'] = newTrade['outputAmount']-newTrade['optimalAmount']
+          //       newTrade['p'] = int(newTrade['profit'])/pow(10, tokenOut['decimal'])
+          //   else:
+          //       continue
+          //   bestTrades = sortTrades(bestTrades, newTrade)
+          //   bestTrades.reverse()
+          //   bestTrades = bestTrades[:count]
+          sortedInsert(bestTrades, new Trade(new Route([].concat(currentPairs, [pair]), originalAmountIn.currency, currencyOut), originalAmountIn, exports.TradeType.EXACT_INPUT, getOptimalAmount(Ea, Eb), getAmountOut(getOptimalAmount(Ea, Eb), Ea, Eb)), maxNumResults, tradeComparator, tradeFilter);
+        }
+      } else if (maxHops > 1 && pairs.length > 1) {
+        var pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length)); // otherwise, consider all the other paths that lead from this token as long as we have not exceeded maxHops
+
+        Trade.bestTradeExactIn(pairsExcludingThisPair, amountOut, currencyOut, {
+          maxNumResults: maxNumResults,
+          maxHops: maxHops - 1
+        }, [].concat(currentPairs, [pair]), originalAmountIn, bestTrades);
+      }
+    }
+
+    return bestTrades;
   }
   /**
    * Given a list of pairs, and a fixed amount in, returns the top `maxNumResults` trades that go from an input token
@@ -1255,13 +1441,13 @@ var Trade = /*#__PURE__*/function () {
    */
   ;
 
-  Trade.bestTradeExactIn = function bestTradeExactIn(pairs, currencyAmountIn, currencyOut, _temp, // used in recursion.
+  Trade.bestTradeExactIn = function bestTradeExactIn(pairs, currencyAmountIn, currencyOut, _temp4, // used in recursion.
   currentPairs, originalAmountIn, bestTrades) {
-    var _ref = _temp === void 0 ? {} : _temp,
-        _ref$maxNumResults = _ref.maxNumResults,
-        maxNumResults = _ref$maxNumResults === void 0 ? 1 : _ref$maxNumResults,
-        _ref$maxHops = _ref.maxHops,
-        maxHops = _ref$maxHops === void 0 ? 3 : _ref$maxHops;
+    var _ref2 = _temp4 === void 0 ? {} : _temp4,
+        _ref2$maxNumResults = _ref2.maxNumResults,
+        maxNumResults = _ref2$maxNumResults === void 0 ? 1 : _ref2$maxNumResults,
+        _ref2$maxHops = _ref2.maxHops,
+        maxHops = _ref2$maxHops === void 0 ? 4 : _ref2$maxHops;
 
     if (currentPairs === void 0) {
       currentPairs = [];
@@ -1293,9 +1479,9 @@ var Trade = /*#__PURE__*/function () {
       try {
         ;
 
-        var _pair$getOutputAmount2 = pair.getOutputAmount(amountIn);
+        var _pair$getOutputAmount3 = pair.getOutputAmount(amountIn);
 
-        amountOut = _pair$getOutputAmount2[0];
+        amountOut = _pair$getOutputAmount3[0];
       } catch (error) {
         // input too low
         if (error.isInsufficientInputAmountError) {
@@ -1307,7 +1493,7 @@ var Trade = /*#__PURE__*/function () {
 
 
       if (amountOut.token.equals(tokenOut)) {
-        sortedInsert(bestTrades, new Trade(new Route([].concat(currentPairs, [pair]), originalAmountIn.currency, currencyOut), originalAmountIn, exports.TradeType.EXACT_INPUT), maxNumResults, tradeComparator, tradeFilter);
+        sortedInsert(bestTrades, new Trade(new Route([].concat(currentPairs, [pair]), originalAmountIn.currency, currencyOut), originalAmountIn, exports.TradeType.EXACT_INPUT, ZERO, ZERO), maxNumResults, tradeComparator, tradeFilter);
       } else if (maxHops > 1 && pairs.length > 1) {
         var pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length)); // otherwise, consider all the other paths that lead from this token as long as we have not exceeded maxHops
 
@@ -1337,13 +1523,13 @@ var Trade = /*#__PURE__*/function () {
    */
   ;
 
-  Trade.bestTradeExactOut = function bestTradeExactOut(pairs, currencyIn, currencyAmountOut, _temp2, // used in recursion.
+  Trade.bestTradeExactOut = function bestTradeExactOut(pairs, currencyIn, currencyAmountOut, _temp5, // used in recursion.
   currentPairs, originalAmountOut, bestTrades) {
-    var _ref2 = _temp2 === void 0 ? {} : _temp2,
-        _ref2$maxNumResults = _ref2.maxNumResults,
-        maxNumResults = _ref2$maxNumResults === void 0 ? 3 : _ref2$maxNumResults,
-        _ref2$maxHops = _ref2.maxHops,
-        maxHops = _ref2$maxHops === void 0 ? 3 : _ref2$maxHops;
+    var _ref3 = _temp5 === void 0 ? {} : _temp5,
+        _ref3$maxNumResults = _ref3.maxNumResults,
+        maxNumResults = _ref3$maxNumResults === void 0 ? 3 : _ref3$maxNumResults,
+        _ref3$maxHops = _ref3.maxHops,
+        maxHops = _ref3$maxHops === void 0 ? 3 : _ref3$maxHops;
 
     if (currentPairs === void 0) {
       currentPairs = [];
@@ -1389,7 +1575,7 @@ var Trade = /*#__PURE__*/function () {
 
 
       if (amountIn.token.equals(tokenIn)) {
-        sortedInsert(bestTrades, new Trade(new Route([pair].concat(currentPairs), currencyIn, originalAmountOut.currency), originalAmountOut, exports.TradeType.EXACT_OUTPUT), maxNumResults, tradeComparator, tradeFilter);
+        sortedInsert(bestTrades, new Trade(new Route([pair].concat(currentPairs), currencyIn, originalAmountOut.currency), originalAmountOut, exports.TradeType.EXACT_OUTPUT, ZERO, ZERO), maxNumResults, tradeComparator, tradeFilter);
       } else if (maxHops > 1 && pairs.length > 1) {
         var pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length)); // otherwise, consider all the other paths that arrive at this token as long as we have not exceeded maxHops
 

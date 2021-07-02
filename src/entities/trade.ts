@@ -1,4 +1,5 @@
 import invariant from 'tiny-invariant'
+import JSBI from 'jsbi'
 
 import { ChainId, ONE, TradeType, ZERO } from '../constants'
 import { sortedInsert } from '../utils'
@@ -75,6 +76,14 @@ export function tradeComparator(a: Trade, b: Trade) {
     return ioComp
   }
 
+   //newTrade['profit'] = newTrade['outputAmount']-newTrade['optimalAmount']
+   let Aprofit = JSBI.subtract(a.output,a.optimalAmount)
+   let Bprofit = JSBI.subtract(b.output,b.optimalAmount)
+
+   if(JSBI.GE(Aprofit,Bprofit)) {
+     return -1
+   }
+
   // consider lowest slippage next, since these are less likely to fail
   if (a.priceImpact.lessThan(b.priceImpact)) {
     return -1
@@ -108,6 +117,96 @@ function wrappedCurrency(currency: Currency, chainId: ChainId): Token {
   if (currency instanceof Token) return currency
   if (currency === ETHER) return WETH[chainId]
   invariant(false, 'CURRENCY')
+}
+
+function getOptimalAmount(Ea: JSBI, Eb: JSBI): JSBI {
+  const numerator = JSBI.multiply(JSBI.multiply(JSBI.multiply(Ea, Eb), JSBI.BigInt(1000)),JSBI.BigInt(997))
+  const numm = JSBI.multiply(Ea, JSBI.BigInt(1000))
+
+  const num1 = JSBI.subtract(JSBI.BigInt(Math.sqrt(JSBI.toNumber(numerator))),numm)
+  const num2 = JSBI.divide(num1,JSBI.BigInt(997))
+
+  return num2
+}
+
+function getAmountOut(amountIn:JSBI, reserveIn:JSBI, reserveOut:JSBI):JSBI {
+  const numerator =JSBI.multiply(JSBI.multiply(reserveOut, amountIn), JSBI.BigInt(997))
+  const numm = JSBI.add(JSBI.multiply(JSBI.BigInt(1000), reserveIn),JSBI.multiply(JSBI.BigInt(997), amountIn))
+
+  return JSBI.divide(numerator,numm)
+}
+
+function getEaEb(tokenIn:Token, pairs:Pair[]):[JSBI,JSBI] {
+  let Ea: JSBI  = ZERO
+  let Eb: JSBI  = ZERO
+  let Ra :JSBI
+  let Rb : JSBI
+  let Rb1 :JSBI
+  let Rc : JSBI
+  let tokenOut: Token = tokenIn
+
+  for (let i = 0; i < pairs.length; i++) {
+    const pair = pairs[i]
+    if(i == 0){
+       if(tokenIn.address == pair.token0.address) {
+        tokenOut = pair.token1
+       }else{
+        tokenOut = pair.token0
+       }
+    }else if(i == 1) {
+         Ra = pairs[0].reserve0.raw
+         Rb = pairs[0].reserve1.raw
+
+        if(tokenIn.address == pairs[0].token0.address) {
+          let temp :JSBI = Ra
+          Ra = Rb
+          Rb = temp
+        }
+
+        Rb1 = pair.reserve0.raw
+        Rc = pair.reserve1.raw
+
+       if (tokenOut.address == pair.token0.address){
+            let temp = Rb1
+            Rb1 = Rc
+            Rc = temp
+            tokenOut = pair.token0
+       }else{
+          const numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000))
+          const denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+           Ea = JSBI.divide(numerator, denominator)
+
+          const numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997))
+          const denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+           Eb = JSBI.divide(numerator2, denominator2)
+       }
+  }else{
+        Ra = Ea
+        Rb = Eb
+        
+        Rb1 = pair.reserve0.raw
+        Rc  = pair.reserve1.raw
+
+        if(tokenOut.address == pair.token1.address) {
+          let  temp = Rb1
+            Rb1 = Rc
+            Rc = temp
+            tokenOut = pair.token0
+        }else{
+           tokenOut = pair.token1
+        }
+
+          const numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000))
+          const denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+           Ea = JSBI.divide(numerator, denominator)
+
+          const numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997))
+          const denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+           Eb = JSBI.divide(numerator2, denominator2)
+    }
+  }
+
+    return [Ea,Eb]
 }
 
 /**
@@ -144,13 +243,19 @@ export class Trade {
    */
   public readonly priceImpact: Percent
 
+  public readonly optimalAmount: JSBI
+
+  public readonly output: JSBI
+
+
+
   /**
    * Constructs an exact in trade with the given amount in and route
    * @param route route of the exact in trade
    * @param amountIn the amount being passed in
    */
   public static exactIn(route: Route, amountIn: CurrencyAmount): Trade {
-    return new Trade(route, amountIn, TradeType.EXACT_INPUT)
+    return new Trade(route, amountIn, TradeType.EXACT_INPUT,ZERO,ZERO)
   }
 
   /**
@@ -159,10 +264,10 @@ export class Trade {
    * @param amountOut the amount returned by the trade
    */
   public static exactOut(route: Route, amountOut: CurrencyAmount): Trade {
-    return new Trade(route, amountOut, TradeType.EXACT_OUTPUT)
+    return new Trade(route, amountOut, TradeType.EXACT_OUTPUT,ZERO,ZERO)
   }
 
-  public constructor(route: Route, amount: CurrencyAmount, tradeType: TradeType) {
+  public constructor(route: Route, amount: CurrencyAmount, tradeType: TradeType,optimalAmount:JSBI,output:JSBI) {
     const amounts: TokenAmount[] = new Array(route.path.length)
     const nextPairs: Pair[] = new Array(route.pairs.length)
 
@@ -215,6 +320,8 @@ export class Trade {
     )
     this.nextMidPrice = Price.fromRoute(new Route(nextPairs, route.input))
     this.priceImpact = computePriceImpact(route.midPrice, this.inputAmount, this.outputAmount)
+    this.optimalAmount = optimalAmount
+    this.output = output
   }
 
   /**
@@ -252,6 +359,89 @@ export class Trade {
     }
   }
 
+  public static findArb(
+    pairs: Pair[],
+    currencyAmountIn: CurrencyAmount,
+    currencyOut: Currency,
+    { maxNumResults = 1, maxHops = 4 }: BestTradeOptions = {},
+    // used in recursion.
+    currentPairs: Pair[] = [],
+    originalAmountIn: CurrencyAmount = currencyAmountIn,
+    bestTrades: Trade[] = []
+  ): Trade[] {
+    invariant(pairs.length > 0, 'PAIRS')
+    invariant(maxHops > 0, 'MAX_HOPS')
+    invariant(originalAmountIn === currencyAmountIn || currentPairs.length > 0, 'INVALID_RECURSION')
+    const chainId: ChainId | undefined =
+      currencyAmountIn instanceof TokenAmount
+        ? currencyAmountIn.token.chainId
+        : currencyOut instanceof Token
+        ? currencyOut.chainId
+        : undefined
+    invariant(chainId !== undefined, 'CHAIN_ID')
+
+    const originToken = wrappedAmount(originalAmountIn, chainId)
+    const amountIn = wrappedAmount(currencyAmountIn, chainId)
+    const tokenOut = wrappedCurrency(currencyOut, chainId)
+
+    invariant(!originToken.token.equals(tokenOut)) 
+
+    for (let i = 0; i < pairs.length; i++) {
+      const pair = pairs[i]
+      // pair irrelevant
+      if (!pair.token0.equals(amountIn.token) && !pair.token1.equals(amountIn.token)) continue
+      if (pair.reserve0.equalTo(ZERO) || pair.reserve1.equalTo(ZERO)) continue
+
+      let amountOut: TokenAmount
+      try {
+        ;[amountOut] = pair.getOutputAmount(amountIn)
+      } catch (error) {
+        // input too low
+        if (error.isInsufficientInputAmountError) {
+          continue
+        }
+        throw error
+      }
+      // we have arrived at the output token, so this is the final trade of one of the paths
+      if (amountOut.token.equals(tokenOut) && currentPairs.length > 2) {
+         let [Ea, Eb] = getEaEb(tokenOut, [...currentPairs, pair]) 
+          if(Ea < Eb) {
+              sortedInsert(
+                bestTrades,
+                new Trade(
+                  new Route([...currentPairs, pair], originalAmountIn.currency, currencyOut),
+                  originalAmountIn,
+                  TradeType.EXACT_INPUT,
+                  getOptimalAmount(Ea, Eb),
+                  getAmountOut(getOptimalAmount(Ea, Eb),Ea,Eb)
+                ),
+                maxNumResults,
+                tradeComparator,
+                tradeFilter
+              )
+          }
+      } else if (maxHops > 1 && pairs.length > 1) {
+        const pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length))
+
+        // otherwise, consider all the other paths that lead from this token as long as we have not exceeded maxHops
+        Trade.bestTradeExactIn(
+          pairsExcludingThisPair,
+          amountOut,
+          currencyOut,
+          {
+            maxNumResults,
+            maxHops: maxHops - 1
+          },
+          [...currentPairs, pair],
+          originalAmountIn,
+          bestTrades
+        )
+      }
+    }
+
+    return bestTrades
+  }
+
   /**
    * Given a list of pairs, and a fixed amount in, returns the top `maxNumResults` trades that go from an input token
    * amount to an output token, making at most `maxHops` hops.
@@ -270,7 +460,7 @@ export class Trade {
     pairs: Pair[],
     currencyAmountIn: CurrencyAmount,
     currencyOut: Currency,
-    { maxNumResults = 1, maxHops = 3 }: BestTradeOptions = {},
+    { maxNumResults = 1, maxHops = 4 }: BestTradeOptions = {},
     // used in recursion.
     currentPairs: Pair[] = [],
     originalAmountIn: CurrencyAmount = currencyAmountIn,
@@ -312,7 +502,9 @@ export class Trade {
           new Trade(
             new Route([...currentPairs, pair], originalAmountIn.currency, currencyOut),
             originalAmountIn,
-            TradeType.EXACT_INPUT
+            TradeType.EXACT_INPUT,
+            ZERO,
+            ZERO
           ),
           maxNumResults,
           tradeComparator,
@@ -401,7 +593,9 @@ export class Trade {
           new Trade(
             new Route([pair, ...currentPairs], currencyIn, originalAmountOut.currency),
             originalAmountOut,
-            TradeType.EXACT_OUTPUT
+            TradeType.EXACT_OUTPUT,
+            ZERO,
+            ZERO
           ),
           maxNumResults,
           tradeComparator,
@@ -428,4 +622,5 @@ export class Trade {
 
     return bestTrades
   }
+
 }
