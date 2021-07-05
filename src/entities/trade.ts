@@ -75,24 +75,16 @@ export function tradeComparator(a: Trade, b: Trade) {
   if (ioComp !== 0) {
     return ioComp
   }
-
+  
    //newTrade['profit'] = newTrade['outputAmount']-newTrade['optimalAmount']
    let Aprofit = JSBI.subtract(a.output,a.optimalAmount)
    let Bprofit = JSBI.subtract(b.output,b.optimalAmount)
 
    if(JSBI.GE(Aprofit,Bprofit)) {
      return -1
+   }else{
+     return 1
    }
-
-  // consider lowest slippage next, since these are less likely to fail
-  if (a.priceImpact.lessThan(b.priceImpact)) {
-    return -1
-  } else if (a.priceImpact.greaterThan(b.priceImpact)) {
-    return 1
-  }
-
-  // finally consider the number of hops since each hop costs gas
-  return a.route.path.length - b.route.path.length
 }
 
 export interface BestTradeOptions {
@@ -157,7 +149,7 @@ function getEaEb(tokenIn:Token, pairs:Pair[]):[JSBI,JSBI] {
          Ra = pairs[0].reserve0.raw
          Rb = pairs[0].reserve1.raw
 
-        if(tokenIn.address == pairs[0].token0.address) {
+        if(tokenIn.address == pairs[0].token1.address) {
           let temp :JSBI = Ra
           Ra = Rb
           Rb = temp
@@ -166,20 +158,22 @@ function getEaEb(tokenIn:Token, pairs:Pair[]):[JSBI,JSBI] {
         Rb1 = pair.reserve0.raw
         Rc = pair.reserve1.raw
 
-       if (tokenOut.address == pair.token0.address){
+       if (tokenOut.address == pair.token1.address){
             let temp = Rb1
             Rb1 = Rc
             Rc = temp
             tokenOut = pair.token0
        }else{
-          const numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000))
-          const denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
-           Ea = JSBI.divide(numerator, denominator)
-
-          const numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997))
-          const denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
-           Eb = JSBI.divide(numerator2, denominator2)
+        tokenOut = pair.token1
        }
+
+      const numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000))
+      const denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+      Ea = JSBI.divide(numerator, denominator)
+
+      const numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997))
+      const denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+      Eb = JSBI.divide(numerator2, denominator2)
   }else{
         Ra = Ea
         Rb = Eb
@@ -189,20 +183,20 @@ function getEaEb(tokenIn:Token, pairs:Pair[]):[JSBI,JSBI] {
 
         if(tokenOut.address == pair.token1.address) {
           let  temp = Rb1
-            Rb1 = Rc
-            Rc = temp
+          Rb1 = Rc
+          Rc = temp
             tokenOut = pair.token0
         }else{
            tokenOut = pair.token1
         }
 
-          const numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000))
-          const denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
-           Ea = JSBI.divide(numerator, denominator)
+        const numerator = JSBI.multiply(JSBI.multiply(Ra, Rb1), JSBI.BigInt(1000))
+        const denominator = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+        Ea = JSBI.divide(numerator, denominator)
 
-          const numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997))
-          const denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
-           Eb = JSBI.divide(numerator2, denominator2)
+        const numerator2 = JSBI.multiply(JSBI.multiply(Rb, Rc), JSBI.BigInt(997))
+        const denominator2 = JSBI.add(JSBI.multiply(Rb1, JSBI.BigInt(1000)), JSBI.multiply(JSBI.BigInt(997),Rb))
+        Eb = JSBI.divide(numerator2, denominator2)
     }
   }
 
@@ -384,7 +378,7 @@ export class Trade {
     const amountIn = wrappedAmount(currencyAmountIn, chainId)
     const tokenOut = wrappedCurrency(currencyOut, chainId)
 
-    invariant(!originToken.token.equals(tokenOut)) 
+    invariant(originToken.token.equals(tokenOut)) 
 
     for (let i = 0; i < pairs.length; i++) {
       const pair = pairs[i]
