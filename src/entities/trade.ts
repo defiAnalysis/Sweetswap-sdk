@@ -69,15 +69,8 @@ export function tradeFilter(a: Trade) {
   return 0
 }
 
-// extension of the input output comparator that also considers other dimensions of the trade in ranking them
-export function tradeComparator(a: Trade, b: Trade) {
-  const ioComp = inputOutputComparator(a, b)
-  if (ioComp !== 0) {
-    return ioComp
-  }
-  
-   //newTrade['profit'] = newTrade['outputAmount']-newTrade['optimalAmount']
-   let Aprofit = JSBI.subtract(a.output,a.optimalAmount)
+export function arbComparator(a: Trade, b: Trade) {
+  let Aprofit = JSBI.subtract(a.output,a.optimalAmount)
    let Bprofit = JSBI.subtract(b.output,b.optimalAmount)
 
    if(JSBI.GE(Aprofit,Bprofit)) {
@@ -85,6 +78,24 @@ export function tradeComparator(a: Trade, b: Trade) {
    }else{
      return 1
    }
+}
+
+// extension of the input output comparator that also considers other dimensions of the trade in ranking them
+export function tradeComparator(a: Trade, b: Trade) {
+  const ioComp = inputOutputComparator(a, b)
+  if (ioComp !== 0) {
+    return ioComp
+  }
+
+  // consider lowest slippage next, since these are less likely to fail
+  if (a.priceImpact.lessThan(b.priceImpact)) {
+    return -1
+  } else if (a.priceImpact.greaterThan(b.priceImpact)) {
+    return 1
+  }
+
+  // finally consider the number of hops since each hop costs gas
+  return a.route.path.length - b.route.path.length
 }
 
 export interface BestTradeOptions {
@@ -400,7 +411,7 @@ export class Trade {
       if (amountOut.token.equals(tokenOut) && currentPairs.length > 2) {
          let [Ea, Eb] = getEaEb(tokenOut, [...currentPairs, pair]) 
           if(Ea < Eb) {
-              sortedInsert(
+              sortedInsert( 
                 bestTrades,
                 new Trade(
                   new Route([...currentPairs, pair], originalAmountIn.currency, currencyOut),
@@ -410,7 +421,7 @@ export class Trade {
                   getAmountOut(getOptimalAmount(Ea, Eb),Ea,Eb)
                 ),
                 maxNumResults,
-                tradeComparator,
+                arbComparator,
                 tradeFilter
               )
           }
@@ -418,7 +429,7 @@ export class Trade {
         const pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length))
 
         // otherwise, consider all the other paths that lead from this token as long as we have not exceeded maxHops
-        Trade.bestTradeExactIn(
+        Trade.findArb(
           pairsExcludingThisPair,
           amountOut,
           currencyOut,
