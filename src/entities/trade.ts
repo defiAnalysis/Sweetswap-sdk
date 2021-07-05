@@ -126,7 +126,7 @@ function getOptimalAmount(Ea: JSBI, Eb: JSBI): JSBI {
   const numerator = JSBI.multiply(JSBI.multiply(JSBI.multiply(Ea, Eb), JSBI.BigInt(1000)),JSBI.BigInt(997))
   const numm = JSBI.multiply(Ea, JSBI.BigInt(1000))
 
-  const num1 = JSBI.subtract(JSBI.BigInt(Math.sqrt(JSBI.toNumber(numerator))),numm)
+  const num1 = JSBI.subtract(JSBI.BigInt(Math.round(Math.sqrt(JSBI.toNumber(numerator)))),numm)
   const num2 = JSBI.divide(num1,JSBI.BigInt(997))
 
   return num2
