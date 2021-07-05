@@ -408,7 +408,7 @@ export class Trade {
         throw error
       }
       // we have arrived at the output token, so this is the final trade of one of the paths
-      if (amountOut.token.equals(tokenOut) && currentPairs.length > 2) {
+      if (amountOut.token.equals(tokenOut)) {
          let [Ea, Eb] = getEaEb(tokenOut, [...currentPairs, pair]) 
           if(Ea < Eb) {
               sortedInsert( 

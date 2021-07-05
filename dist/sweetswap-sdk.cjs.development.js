@@ -1397,7 +1397,7 @@ var Trade = /*#__PURE__*/function () {
       } // we have arrived at the output token, so this is the final trade of one of the paths
 
 
-      if (amountOut.token.equals(tokenOut) && currentPairs.length > 2) {
+      if (amountOut.token.equals(tokenOut)) {
         var _getEaEb = getEaEb(tokenOut, [].concat(currentPairs, [pair])),
             Ea = _getEaEb[0],
             Eb = _getEaEb[1];
