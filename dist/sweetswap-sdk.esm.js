@@ -788,18 +788,17 @@ var Pair = /*#__PURE__*/function () {
     this.pairAddr = pairAddr;
   }
 
-  var _proto = Pair.prototype;
-
-  _proto.getAddress = function getAddress(tokenA, tokenB) {
-    // return this.pairAddr
+  Pair.getAddress = function getAddress(tokenA, tokenB) {
     tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA];
-    return this.pairAddr;
+    return "";
   }
   /**
    * Returns true if the token is either token0 or token1
    * @param token to check
    */
   ;
+
+  var _proto = Pair.prototype;
 
   _proto.involvesToken = function involvesToken(token) {
     return token.equals(this.token0) || token.equals(this.token1);
@@ -1100,6 +1099,39 @@ function tradeFilter(a) {
   return 0;
 }
 function arbComparator(a, b) {
+  !currencyEquals(a.inputAmount.currency, b.inputAmount.currency) ? process.env.NODE_ENV !== "production" ? invariant(false, 'INPUT_CURRENCY') : invariant(false) : void 0;
+  !currencyEquals(a.outputAmount.currency, b.outputAmount.currency) ? process.env.NODE_ENV !== "production" ? invariant(false, 'OUTPUT_CURRENCY') : invariant(false) : void 0;
+
+  if (a.inputAmount.equalTo(b.inputAmount)) {
+    if (a.outputAmount.lessThan(b.outputAmount)) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+
+  var _getEaEb = getEaEb(wrappedCurrency(a.route.output, a.route.chainId), a.route.pairs),
+      Ea = _getEaEb[0],
+      Eb = _getEaEb[1];
+
+  if (Ea < Eb) {
+    a.optimalAmount = getOptimalAmount(Ea, Eb), a.output = getAmountOut(a.optimalAmount, Ea, Eb);
+  } else {
+    a.optimalAmount = ZERO;
+    a.output = ZERO;
+  }
+
+  var _getEaEb2 = getEaEb(wrappedCurrency(b.route.output, b.route.chainId), b.route.pairs),
+      Ea1 = _getEaEb2[0],
+      Eb1 = _getEaEb2[1];
+
+  if (Ea1 < Eb1) {
+    b.optimalAmount = getOptimalAmount(Ea1, Eb1), b.output = getAmountOut(b.optimalAmount, Ea1, Eb1);
+  } else {
+    b.optimalAmount = ZERO;
+    b.output = ZERO;
+  }
+
   var Aprofit = JSBI.subtract(a.output, a.optimalAmount);
   var Bprofit = JSBI.subtract(b.output, b.optimalAmount);
 
@@ -1148,7 +1180,7 @@ function wrappedCurrency(currency, chainId) {
 function getOptimalAmount(Ea, Eb) {
   var numerator = JSBI.multiply(JSBI.multiply(JSBI.multiply(Ea, Eb), JSBI.BigInt(1000)), JSBI.BigInt(997));
   var numm = JSBI.multiply(Ea, JSBI.BigInt(1000));
-  var num1 = JSBI.subtract(JSBI.BigInt(Math.sqrt(JSBI.toNumber(numerator))), numm);
+  var num1 = JSBI.subtract(JSBI.BigInt(Math.round(Math.sqrt(JSBI.toNumber(numerator)))), numm);
   var num2 = JSBI.divide(num1, JSBI.BigInt(997));
   return num2;
 }
@@ -1348,7 +1380,7 @@ var Trade = /*#__PURE__*/function () {
   currentPairs, originalAmountIn, bestTrades) {
     var _ref = _temp3 === void 0 ? {} : _temp3,
         _ref$maxNumResults = _ref.maxNumResults,
-        maxNumResults = _ref$maxNumResults === void 0 ? 1 : _ref$maxNumResults,
+        maxNumResults = _ref$maxNumResults === void 0 ? 3 : _ref$maxNumResults,
         _ref$maxHops = _ref.maxHops,
         maxHops = _ref$maxHops === void 0 ? 4 : _ref$maxHops;
 
@@ -1398,13 +1430,7 @@ var Trade = /*#__PURE__*/function () {
 
 
       if (amountOut.token.equals(tokenOut)) {
-        var _getEaEb = getEaEb(tokenOut, [].concat(currentPairs, [pair])),
-            Ea = _getEaEb[0],
-            Eb = _getEaEb[1];
-
-        if (Ea < Eb) {
-          sortedInsert(bestTrades, new Trade(new Route([].concat(currentPairs, [pair]), originalAmountIn.currency, currencyOut), originalAmountIn, TradeType.EXACT_INPUT, getOptimalAmount(Ea, Eb), getAmountOut(getOptimalAmount(Ea, Eb), Ea, Eb)), maxNumResults, arbComparator, tradeFilter);
-        }
+        sortedInsert(bestTrades, new Trade(new Route([].concat(currentPairs, [pair]), originalAmountIn.currency, currencyOut), originalAmountIn, TradeType.EXACT_INPUT, ZERO, ZERO), maxNumResults, arbComparator, tradeFilter);
       } else if (maxHops > 1 && pairs.length > 1) {
         var pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length)); // otherwise, consider all the other paths that lead from this token as long as we have not exceeded maxHops
 

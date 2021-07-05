@@ -21,7 +21,10 @@ export class Pair {
   public readonly liquidityToken: Token
   private readonly tokenAmounts: [TokenAmount, TokenAmount]
 
-
+  public static getAddress(tokenA: Token, tokenB: Token): string {
+    tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] 
+    return "";
+  }
   //   const tokens = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
 
   //   if (PAIR_ADDRESS_CACHE?.[tokens[0].address]?.[tokens[1].address] === undefined) {
@@ -55,14 +58,6 @@ export class Pair {
     )
     this.tokenAmounts = tokenAmounts as [TokenAmount, TokenAmount]
     this.pairAddr = pairAddr
-  }
-
-  public getAddress(tokenA: Token, tokenB: Token): string {
-    // return this.pairAddr
-
-    tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] 
-    
-    return this.pairAddr
   }
 
   /**

@@ -70,6 +70,35 @@ export function tradeFilter(a: Trade) {
 }
 
 export function arbComparator(a: Trade, b: Trade) {
+  invariant(currencyEquals(a.inputAmount.currency, b.inputAmount.currency), 'INPUT_CURRENCY')
+  invariant(currencyEquals(a.outputAmount.currency, b.outputAmount.currency), 'OUTPUT_CURRENCY')
+
+  if (a.inputAmount.equalTo(b.inputAmount)) {
+    if (a.outputAmount.lessThan(b.outputAmount)) {
+      return 1
+    } else {
+      return -1
+    }
+  } 
+
+  let [Ea, Eb] = getEaEb(wrappedCurrency(a.route.output,a.route.chainId), a.route.pairs) 
+  if(Ea < Eb) {
+    a.optimalAmount = getOptimalAmount(Ea, Eb),
+    a.output = getAmountOut(a.optimalAmount,Ea,Eb)
+  }else{
+    a.optimalAmount = ZERO
+    a.output = ZERO
+  }
+
+  let [Ea1, Eb1] = getEaEb(wrappedCurrency(b.route.output,b.route.chainId), b.route.pairs) 
+  if(Ea1 < Eb1) {
+    b.optimalAmount = getOptimalAmount(Ea1, Eb1),
+    b.output = getAmountOut(b.optimalAmount,Ea1,Eb1)
+  }else{
+    b.optimalAmount = ZERO
+    b.output = ZERO
+  }
+
   let Aprofit = JSBI.subtract(a.output,a.optimalAmount)
    let Bprofit = JSBI.subtract(b.output,b.optimalAmount)
 
@@ -248,9 +277,9 @@ export class Trade {
    */
   public readonly priceImpact: Percent
 
-  public readonly optimalAmount: JSBI
+  public  optimalAmount: JSBI
 
-  public readonly output: JSBI
+  public  output: JSBI
 
 
 
@@ -368,7 +397,7 @@ export class Trade {
     pairs: Pair[],
     currencyAmountIn: CurrencyAmount,
     currencyOut: Currency,
-    { maxNumResults = 1, maxHops = 4 }: BestTradeOptions = {},
+    { maxNumResults = 3, maxHops = 4 }: BestTradeOptions = {},
     // used in recursion.
     currentPairs: Pair[] = [],
     originalAmountIn: CurrencyAmount = currencyAmountIn,
@@ -409,22 +438,19 @@ export class Trade {
       }
       // we have arrived at the output token, so this is the final trade of one of the paths
       if (amountOut.token.equals(tokenOut)) {
-         let [Ea, Eb] = getEaEb(tokenOut, [...currentPairs, pair]) 
-          if(Ea < Eb) {
-              sortedInsert( 
-                bestTrades,
-                new Trade(
-                  new Route([...currentPairs, pair], originalAmountIn.currency, currencyOut),
-                  originalAmountIn,
-                  TradeType.EXACT_INPUT,
-                  getOptimalAmount(Ea, Eb),
-                  getAmountOut(getOptimalAmount(Ea, Eb),Ea,Eb)
-                ),
-                maxNumResults,
-                arbComparator,
-                tradeFilter
-              )
-          }
+            sortedInsert(
+              bestTrades,
+              new Trade(
+                new Route([...currentPairs, pair], originalAmountIn.currency, currencyOut),
+                originalAmountIn,
+                TradeType.EXACT_INPUT,
+                ZERO,
+                ZERO
+              ),
+              maxNumResults,
+              arbComparator,
+              tradeFilter
+            )
       } else if (maxHops > 1 && pairs.length > 1) {
         const pairsExcludingThisPair = pairs.slice(0, i).concat(pairs.slice(i + 1, pairs.length))
 

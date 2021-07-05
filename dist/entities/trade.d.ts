@@ -51,8 +51,8 @@ export declare class Trade {
      * The percent difference between the mid price before the trade and the trade execution price.
      */
     readonly priceImpact: Percent;
-    readonly optimalAmount: JSBI;
-    readonly output: JSBI;
+    optimalAmount: JSBI;
+    output: JSBI;
     /**
      * Constructs an exact in trade with the given amount in and route
      * @param route route of the exact in trade
